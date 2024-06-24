@@ -14,7 +14,6 @@ pc6_train_features, pc6_train_labels = get_PC6_features_labels(pos_train_data, n
 reshape_pc6_train_features = pc6_train_features.reshape(pc6_train_features.shape[0],-1)
 
 # Encoding through Doc2Vec pretrained
-#doc2vec_model = './Doc2Vec_model/AFP_doc2vec.model'
 doc2vec_train_features, doc2vec_train_labels = get_Doc2Vec_features_labels(pos_train_data, neg_train_data, './Doc2Vec_model/AFP_doc2vec.model')
 reshape_doc2vec_train_features=doc2vec_train_features.reshape((doc2vec_train_features.shape[0],doc2vec_train_features.shape[1],1))
 
@@ -95,7 +94,6 @@ def fold_cv(train_data, labels, mode, output_dir = '.'):
             model = load_model(os.path.join(output_dir, 'kfold%s_best_weights.h5'%fold_no))
             temp_labels_score = model.predict(train_data[val])
             (doc2vec_fpr, doc2vec_tpr, doc2vec_thresholds) = metrics.roc_curve(labels[val], temp_labels_score)
-
             doc2vec_thresidx = findThresIndex(doc2vec_tpr, doc2vec_fpr)
             doc2vec_thres = doc2vec_thresholds[doc2vec_thresidx]
             if type(doc2vec_thres) is np.ndarray:
@@ -113,7 +111,6 @@ def fold_cv(train_data, labels, mode, output_dir = '.'):
         # Increase fold number
         fold_no = fold_no + 1
     return(score_array, label_array)
-
 
 def bert_fold_cv(input_ids, attention_masks, labels, mode, output_dir = '.'):
     score_array = []
@@ -139,7 +136,7 @@ def bert_fold_cv(input_ids, attention_masks, labels, mode, output_dir = '.'):
         fold_no = fold_no + 1
     return(score_array, label_array)
 
-# pc6 results
+# Run&Write PC6 results
 pc6_svm_res, pc6_svm_label = fold_cv(reshape_pc6_train_features, pc6_train_labels, mode='svm', output_dir = './ensemble_10_fold(AI4AFP)/pc6')
 with open('./ensemble_10_fold(AI4AFP)/pc6_svm_res.txt', 'w') as fp:
     for item in pc6_svm_res:
@@ -152,7 +149,8 @@ pc6_cnn_res, pc6_cnn_label = fold_cv(pc6_train_features, pc6_train_labels, mode=
 with open('./ensemble_10_fold(AI4AFP)/pc6_cnn_res.txt', 'w') as fp:
     for item in pc6_cnn_res:
         fp.write("%s\n" % item)
-# doc2vec results
+
+# Run&Write Doc2vec results
 d2v_svm_res, d2v_svm_label = fold_cv(doc2vec_train_features, doc2vec_train_labels, mode='svm', output_dir = './ensemble_10_fold(AI4AFP)/doc2vec')
 with open('./ensemble_10_fold(AI4AFP)/d2v_svm_res.txt', 'w') as fp:
     for item in d2v_svm_res:
@@ -166,19 +164,19 @@ with open('./ensemble_10_fold(AI4AFP)/d2v_cnn_res.txt', 'w') as fp:
     for item in d2v_cnn_res:
         fp.write("%s\n" % item)
 
-#bert results
+# Run&Write Bert results
 bert_res, ber_label = bert_fold_cv(bert_train_features, bert_train_attention_masks, bert_train_labels, mode='bert', output_dir = './ensemble_10_fold(AI4AFP)/bert')
 with open('./ensemble_10_fold(AI4AFP)/bert_res.txt', 'w') as fp:
    for item in bert_res:
        fp.write("%s\n" % item)
 
-#ensemble 10fold
+# Run ensemble model 10fold
 from model import train_ensemble_model
 ensemble_len = len(pc6_svm_res)
 for i in range(0, ensemble_len):
     ensembleX_list = []
     ensembleY_list = []
-    #print(i)
+    
     pc6_svm = pc6_svm_res[i]
     pc6_rf = pc6_rf_res[i]
     pc6_cnn = pc6_cnn_res[i]

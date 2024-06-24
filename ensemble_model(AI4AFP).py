@@ -55,7 +55,6 @@ from model_tools import learning_curve, evalution_metrics
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import load_model
 
-
 # Create directory
 if not os.path.isdir('ensemble_model/AI4AFP'):
     os.makedirs('ensemble_model/AI4AFP/pc6')
@@ -91,7 +90,7 @@ pc6_cnn_labels_score = pc6_cnn_model.predict(pc6_valid_features)
 pc6_cnn_res = evalution_metrics(pc6_valid_labels, pc6_cnn_labels_score)
 
 # Doc2vec model
-#SVM
+# SVM
 doc2vec_svc = svm.SVC()
 doc2vec_svc_fit = doc2vec_svc.fit(doc2vec_train_features, doc2vec_train_labels)
 joblib.dump(doc2vec_svc, './ensemble_model/AI4AFP/doc2vec/doc2vec_features_svm.pkl')
@@ -108,7 +107,6 @@ joblib.dump(doc2vec_forest, './ensemble_model/AI4AFP/doc2vec/doc2vec_features_fo
 doc2vec_forest = joblib.load('./ensemble_model/AI4AFP/doc2vec/doc2vec_features_forest.pkl')
 doc2vec_rf_labels_score = doc2vec_forest.predict(doc2vec_valid_features)
 doc2vec_rf_res = evalution_metrics(doc2vec_valid_labels, doc2vec_rf_labels_score)
-
 
 # CNN
 doc2vec_train_data_, doc2vec_test_data_, doc2vec_train_labels_, doc2vec_test_labels_ = train_test_split(reshape_doc2vec_train_features, doc2vec_train_labels, test_size= 0.1, random_state = 1, stratify = pc6_train_labels)
@@ -139,7 +137,7 @@ doc2vec_thres = doc2vec_thresholds[doc2vec_thresidx]
 print('PC6_CNN_thres=' + str(pc6_thres))
 print('Doc2vec_CNN_thres=' +  str(doc2vec_thres))
 
-#Generate ensemble model input
+# Generate ensemble model input
 from model import train_ensemble_model
 valid_size = len(pc6_valid_labels)
 

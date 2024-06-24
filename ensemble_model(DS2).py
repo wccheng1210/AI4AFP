@@ -151,6 +151,7 @@ for i in range(valid_size):
         score_list.append(float('1'))
     else:
         score_list.append(float('0'))
+        
     score_list.append(float(doc2vec_rf_labels_score[i]))
     score_list.append(float(doc2vec_svm_labels_score[i]))
     if(doc2vec_cnn_labels_score[i][0] >= 0.5):

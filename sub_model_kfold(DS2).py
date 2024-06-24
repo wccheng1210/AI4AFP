@@ -136,7 +136,7 @@ def bert_fold_cv(input_ids, attention_masks, labels, mode, output_dir = '.'):
         fold_no = fold_no + 1
     return(score_array, label_array)
 
-# pc6 results
+# Run&Write PC6 results
 pc6_svm_res, pc6_svm_label = fold_cv(reshape_pc6_train_features, pc6_train_labels, mode='svm', output_dir = './ensemble_10_fold(DS2)/pc6')
 with open('./ensemble_10_fold(DS2)/pc6_svm_res(DS2).txt', 'w') as fp:
     for item in pc6_svm_res:
@@ -150,7 +150,7 @@ with open('./ensemble_10_fold(DS2)/pc6_cnn_res(DS2).txt', 'w') as fp:
     for item in pc6_cnn_res:
         fp.write("%s\n" % item)
 
-# doc2vec results
+# Run&Write Doc2vec results
 d2v_svm_res, d2v_svm_label = fold_cv(doc2vec_train_features, doc2vec_train_labels, mode='svm', output_dir = './ensemble_10_fold(DS2)/doc2vec')
 with open('./ensemble_10_fold(DS2)/d2v_svm_res(DS2).txt', 'w') as fp:
     for item in d2v_svm_res:
@@ -164,19 +164,19 @@ with open('./ensemble_10_fold(DS2)/d2v_cnn_res(DS2).txt', 'w') as fp:
     for item in d2v_cnn_res:
         fp.write("%s\n" % item)
 
-#bert results
+# Run&Write Bert results
 bert_res, ber_label = bert_fold_cv(bert_train_features, bert_train_attention_masks, bert_train_labels, mode='bert', output_dir = './ensemble_10_fold(DS2)/bert')
 with open('./ensemble_10_fold(DS2)/bert_res(DS2).txt', 'w') as fp:
    for item in bert_res:
        fp.write("%s\n" % item)
 
-#ensemble 10fold
+# Run ensemble model 10fold
 from model import train_ensemble_model
 ensemble_len = len(pc6_svm_res)
 for i in range(0, ensemble_len):
     ensembleX_list = []
     ensembleY_list = []
-    #print(i)
+    
     pc6_svm = pc6_svm_res[i]
     pc6_rf = pc6_rf_res[i]
     pc6_cnn = pc6_cnn_res[i]
