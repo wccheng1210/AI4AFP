@@ -527,7 +527,7 @@ def get_bert_prediction(train_pos_fasta, train_neg_fasta, test_pos_fasta, test_n
         
     # Evaluate on Test Set
     # With the test set prepared, we can apply our fine-tuned model to generate predictions on the test set.
-    model = torch.load(model_path + '/ensemble_prot_bert_bfd_epoch2_1e-06.pt')
+    model = torch.load(model_path + '/ensemble_prot_bert_bfd_epoch1_1e-06.pt')
     
     # Prediction on test set
     # Put model in evaluation mode
@@ -589,7 +589,7 @@ def get_bert_prediction(train_pos_fasta, train_neg_fasta, test_pos_fasta, test_n
     #print('recall:',recall_score(test_labels, pred_labels))
     #print(classification_report(test_labels, pred_labels, target_names=target_names))
     
-    return pred_labels
+    return pred_labels, thresholds[ix]
 ##########################################################################
 def train_bert_model(train_pos_fasta, train_neg_fasta, model_name, model_path, MAX_LEN):
     
@@ -1168,7 +1168,7 @@ def run_bert_prediction(test_pos_fasta, test_neg_fasta, model_name, model_path, 
     #print('recall:',recall_score(test_labels, pred_labels))
     #print(classification_report(test_labels, pred_labels, target_names=target_names))
     
-    return pred_labels
+    return pred_labels, thresholds[ix]
 #############################################################
 def get_bert_features_labels(pos_fasta, neg_fasta, model_path, MAX_LEN):
     
@@ -1822,16 +1822,16 @@ def run_bert_prediction_encode(test_input_ids, test_attention_masks, test_labels
     labels_score = []
     labels_score = torch.nn.Softmax()(torch.tensor(predictions)).numpy()
 
-    fpr, tpr, thresholds = roc_curve(test_labels, labels_score[:,1])
+    #fpr, tpr, thresholds = roc_curve(test_labels, labels_score[:,1])
 
     # calculate the g-mean for each threshold
     gmeans = np.sqrt(tpr * (1-fpr))
 
     # locate the index of the largest g-mean
-    ix = np.argmax(gmeans)
-    print('Best Threshold=%f, G-Mean=%.3f' % (thresholds[ix], gmeans[ix]))
+    #ix = np.argmax(gmeans)
+    #print('Best Threshold=%f, G-Mean=%.3f' % (thresholds[ix], gmeans[ix]))
 
-    pred_labels = [1 if p else 0 for p in labels_score[:,1] > thresholds[ix]]
+    pred_labels = [1 if p else 0 for p in labels_score[:,1] > 0.98]
     #pred_labels[:10]
     
     #from sklearn.metrics import classification_report, precision_score, recall_score, accuracy_score
@@ -1843,3 +1843,167 @@ def run_bert_prediction_encode(test_input_ids, test_attention_masks, test_labels
     #print(classification_report(test_labels, pred_labels, target_names=target_names))
     
     return pred_labels
+    
+def seq_bert_prediction(seq_fasta, model_name, model_path, MAX_LEN):
+    
+    torch.cuda.set_device(0)
+
+    # If there's a GPU available...
+    if torch.cuda.is_available():    
+
+        # Tell PyTorch to use the GPU.    
+        device = torch.device("cuda")
+
+        print('There are %d GPU(s) available.' % torch.cuda.device_count())
+
+        print('We will use the GPU:', torch.cuda.get_device_name(0))
+
+    # If not...
+    else:
+        print('No GPU available, using the CPU instead.')
+        device = torch.device("cpu")
+
+    #seed_val = 42
+
+    #random.seed(seed_val)
+    #np.random.seed(seed_val)
+    #torch.manual_seed(seed_val)
+    #torch.cuda.manual_seed_all(seed_val)
+
+    print('Loading BERT tokenizer...')
+    tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=False)
+
+    # Performance On Test Set
+    # Data Preparation
+    pred_seq = read_fasta(seq_fasta)
+
+    pred_seq_sentences = []
+
+    for s in pred_seq.values():
+        tmp = ''
+        cnt = 0
+        for w in s:
+            cnt+=1
+            if cnt<MAX_LEN-1:
+                tmp+=w+' '
+        pred_seq_sentences.append(tmp)
+
+    #test_sentences=test_positive_sentences+test_negtive_sentences
+    #test_labels = [1]*len(test_positive_sentences)+[0]*len(test_negtive_sentences)
+
+    # Report the number of sentences.
+    print('Number of seqence sentences: {:,}\n'.format(len(pred_seq_sentences)))
+
+    # Tokenize all of the sentences and map the tokens to thier word IDs.
+    pred_seq_input_ids = []
+
+    # For every sentence...
+    for sent in pred_seq_sentences:
+        # `encode` will:
+        #   (1) Tokenize the sentence.
+        #   (2) Prepend the `[CLS]` token to the start.
+        #   (3) Append the `[SEP]` token to the end.
+        #   (4) Map tokens to their IDs.
+        encoded_sent = tokenizer.encode(
+                            sent,                      # Sentence to encode.
+                            add_special_tokens = True, # Add '[CLS]' and '[SEP]'
+                       )
+        
+        pred_seq_input_ids.append(encoded_sent)
+
+    # Pad our input tokens
+    # input_ids = pad_sequences(input_ids, maxlen=MAX_LEN, 
+    #                           dtype="long", truncating="post", padding="post")
+
+    for index, value in enumerate(pred_seq_input_ids):
+        if len(value)<MAX_LEN:
+            pred_seq_input_ids[index] = value+[0]*(MAX_LEN-len(value))
+
+    # Create attention masks
+    pred_seq_attention_masks = []
+
+    # Create a mask of 1s for each token followed by 0s for padding
+    for seq in pred_seq_input_ids:
+        seq_mask = [float(i>0) for i in seq]
+        pred_seq_attention_masks.append(seq_mask) 
+
+    # Convert to tensors.
+    prediction_inputs = torch.tensor(pred_seq_input_ids)
+    prediction_masks = torch.tensor(pred_seq_attention_masks)
+    #prediction_labels = torch.tensor(pred_seq_labels)
+
+    # Set the batch size.  
+    batch_size = 1
+
+    # Create the DataLoader.
+    prediction_data = TensorDataset(prediction_inputs, prediction_masks)
+    #prediction_data = TensorDataset(prediction_inputs, prediction_masks, prediction_labels)
+    prediction_sampler = SequentialSampler(prediction_data)
+    prediction_dataloader = DataLoader(prediction_data, sampler=prediction_sampler, batch_size=batch_size)
+        
+    # Evaluate on Test Set
+    # With the test set prepared, we can apply our fine-tuned model to generate predictions on the test set.
+    model = torch.load(model_path + '/ensemble_prot_bert_bfd_epoch1_1e-06.pt')
+    
+    # Prediction on test set
+    # Put model in evaluation mode
+    model.eval()
+
+    # Tracking variables 
+    predictions , true_labels = [], []
+
+    # Predict 
+    for batch in prediction_dataloader:
+        # Add batch to GPU
+        batch = tuple(t.to(device) for t in batch)
+
+        # Unpack the inputs from our dataloader
+        b_input_ids, b_input_mask= batch
+        #b_input_ids, b_input_mask, b_labels = batch
+
+        # Telling the model not to compute or store gradients, saving memory and 
+        # speeding up prediction
+        with torch.no_grad():
+          # Forward pass, calculate logit predictions
+          outputs = model(b_input_ids, token_type_ids=None, 
+                          attention_mask=b_input_mask)
+
+        logits = outputs[0]
+
+      # Move logits and labels to CPU
+        logits = logits.detach().cpu().numpy()
+        #label_ids = b_labels.to('cpu').numpy()
+      
+      # Store predictions and true labels
+        predictions+=list(logits)
+        #true_labels.append(label_ids)
+
+    print('DONE.')
+    
+    #from sklearn.metrics import roc_curve
+
+    pred_labels = []
+    #labels_score = []
+    labels_score = torch.nn.Softmax()(torch.tensor(predictions)).numpy()
+
+    #fpr, tpr, thresholds = roc_curve(test_labels, labels_score[:,1])
+
+    # calculate the g-mean for each threshold
+    #gmeans = np.sqrt(tpr * (1-fpr))
+
+    # locate the index of the largest g-mean
+    #ix = np.argmax(gmeans)
+    #print('Best Threshold=%f, G-Mean=%.3f' % (thresholds[ix], gmeans[ix]))
+
+    #pred_labels = [1 if p else 0 for p in labels_score[:,1] > thres]
+    #pred_labels[:10]
+    
+    #from sklearn.metrics import classification_report, precision_score, recall_score, accuracy_score
+
+    #target_names = ['NonAFP','AFP']
+    #print('accuracy:',accuracy_score(test_labels, pred_labels))
+    #print('precision:',precision_score(test_labels, pred_labels))
+    #print('recall:',recall_score(test_labels, pred_labels))
+    #print(classification_report(test_labels, pred_labels, target_names=target_names))
+    
+    return labels_score

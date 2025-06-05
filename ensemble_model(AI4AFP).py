@@ -56,36 +56,38 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import load_model
 
 # Create directory
-if not os.path.isdir('ensemble_model/AI4AFP'):
-    os.makedirs('ensemble_model/AI4AFP/pc6')
-    os.makedirs('ensemble_model/AI4AFP/doc2vec')
-    os.makedirs('ensemble_model/AI4AFP/bert')
+if not os.path.isdir('ensemble_model/pc6'):
+    os.makedirs('ensemble_model/pc6')
+if not os.path.isdir('ensemble_model/doc2vec'):
+    os.makedirs('ensemble_model/doc2vec')
+if not os.path.isdir('ensemble_model/bert'):
+    os.makedirs('ensemble_model/bert')
 
 # PC6 model
 # SVM
 pc6_svc = svm.SVC()
 pc6_svc_fit = pc6_svc.fit(reshape_pc6_train_features, pc6_train_labels)
-joblib.dump(pc6_svc, './ensemble_model/AI4AFP/pc6/pc6_features_svm.pkl')
+joblib.dump(pc6_svc, './ensemble_model/pc6/pc6_features_svm.pkl')
 
-pc6_svc = joblib.load('./ensemble_model/AI4AFP/pc6/pc6_features_svm.pkl')
+pc6_svc = joblib.load('./ensemble_model/pc6/pc6_features_svm.pkl')
 pc6_svm_labels_score = pc6_svc.predict(reshape_pc6_valid_features)
 pc6_svm_res = evalution_metrics(pc6_valid_labels, pc6_svm_labels_score)
 
 # RF
 pc6_forest = ensemble.RandomForestClassifier(n_estimators = 100)
 pc6_forest_fit = pc6_forest.fit(reshape_pc6_train_features, pc6_train_labels)
-joblib.dump(pc6_forest, './ensemble_model/AI4AFP/pc6/pc6_features_forest.pkl')
+joblib.dump(pc6_forest, './ensemble_model/pc6/pc6_features_forest.pkl')
 
-pc6_forest = joblib.load('./ensemble_model/AI4AFP/pc6/pc6_features_forest.pkl')
+pc6_forest = joblib.load('./ensemble_model/pc6/pc6_features_forest.pkl')
 pc6_rf_labels_score = pc6_forest.predict(reshape_pc6_valid_features)
 pc6_rf_res = evalution_metrics(pc6_valid_labels, pc6_rf_labels_score)
 
 # CNN
 pc6_train_data_, pc6_test_data_, pc6_train_labels_, pc6_test_labels_ = train_test_split(pc6_train_features, pc6_train_labels, test_size= 0.1, random_state = 1, stratify = pc6_train_labels)
-pc6_t_m = train_pc6_model(pc6_train_data_, pc6_train_labels_, pc6_test_data_, pc6_test_labels_, 'ensemble', path = './ensemble_model/AI4AFP/pc6')
+pc6_t_m = train_pc6_model(pc6_train_data_, pc6_train_labels_, pc6_test_data_, pc6_test_labels_, 'pc6', path = './ensemble_model/pc6')
 learning_curve(pc6_t_m.history)
 
-pc6_cnn_model = load_model('./ensemble_model/AI4AFP/pc6/ensemble_best_weights.h5')
+pc6_cnn_model = load_model('./ensemble_model/pc6/pc6_best_weights.h5')
 pc6_cnn_labels_score = pc6_cnn_model.predict(pc6_valid_features)
 pc6_cnn_res = evalution_metrics(pc6_valid_labels, pc6_cnn_labels_score)
 
@@ -93,33 +95,33 @@ pc6_cnn_res = evalution_metrics(pc6_valid_labels, pc6_cnn_labels_score)
 # SVM
 doc2vec_svc = svm.SVC()
 doc2vec_svc_fit = doc2vec_svc.fit(doc2vec_train_features, doc2vec_train_labels)
-joblib.dump(doc2vec_svc, './ensemble_model/AI4AFP/doc2vec/doc2vec_features_svm.pkl')
+joblib.dump(doc2vec_svc, './ensemble_model/doc2vec/doc2vec_features_svm.pkl')
 
-doc2vec_svc = joblib.load('./ensemble_model/AI4AFP/doc2vec/doc2vec_features_svm.pkl')
+doc2vec_svc = joblib.load('./ensemble_model/doc2vec/doc2vec_features_svm.pkl')
 doc2vec_svm_labels_score = doc2vec_svc.predict(doc2vec_valid_features)
 doc2vec_svm_res = evalution_metrics(doc2vec_valid_labels, doc2vec_svm_labels_score)
 
 # RF
 doc2vec_forest = ensemble.RandomForestClassifier(n_estimators = 100)
 doc2vec_forest_fit = doc2vec_forest.fit(doc2vec_train_features, doc2vec_train_labels)
-joblib.dump(doc2vec_forest, './ensemble_model/AI4AFP/doc2vec/doc2vec_features_forest.pkl')
+joblib.dump(doc2vec_forest, './ensemble_model/doc2vec/doc2vec_features_forest.pkl')
 
-doc2vec_forest = joblib.load('./ensemble_model/AI4AFP/doc2vec/doc2vec_features_forest.pkl')
+doc2vec_forest = joblib.load('./ensemble_model/doc2vec/doc2vec_features_forest.pkl')
 doc2vec_rf_labels_score = doc2vec_forest.predict(doc2vec_valid_features)
 doc2vec_rf_res = evalution_metrics(doc2vec_valid_labels, doc2vec_rf_labels_score)
 
 # CNN
 doc2vec_train_data_, doc2vec_test_data_, doc2vec_train_labels_, doc2vec_test_labels_ = train_test_split(reshape_doc2vec_train_features, doc2vec_train_labels, test_size= 0.1, random_state = 1, stratify = pc6_train_labels)
-doc2vec_t_m = train_doc2vec_model(doc2vec_train_data_, doc2vec_train_labels_, doc2vec_test_data_, doc2vec_test_labels_, 'ensemble', path = './ensemble_model/AI4AFP/doc2vec')
+doc2vec_t_m = train_doc2vec_model(doc2vec_train_data_, doc2vec_train_labels_, doc2vec_test_data_, doc2vec_test_labels_, 'doc2vec', path = './ensemble_model/doc2vec')
 learning_curve(doc2vec_t_m.history)
 
-doc2vec_cnn_model = load_model('./ensemble_model/AI4AFP/doc2vec/ensemble_best_weights.h5')
+doc2vec_cnn_model = load_model('./ensemble_model/doc2vec/doc2vec_best_weights.h5')
 doc2vec_cnn_labels_score = doc2vec_cnn_model.predict(reshape_doc2vec_valid_features)
 doc2vec_cnn_res = evalution_metrics(doc2vec_valid_labels, doc2vec_cnn_labels_score)
 
 # BERT model
-bert_labels = get_bert_prediction(pos_train_data, neg_train_data, pos_valid_data, neg_valid_data, 'Rostlab/prot_bert_bfd', './ensemble_model/AI4AFP/bert', MAX_LEN=50)
-bert_labels_score = run_bert_prediction(pos_valid_data, neg_valid_data, 'Rostlab/prot_bert_bfd', './ensemble_model/AI4AFP/bert', MAX_LEN=50)
+bert_labels_score, bert_thres = get_bert_prediction(pos_train_data, neg_train_data, pos_valid_data, neg_valid_data, 'Rostlab/prot_bert_bfd', './ensemble_model/bert', MAX_LEN=50)
+#bert_labels_score = run_bert_prediction(pos_valid_data, neg_valid_data, 'Rostlab/prot_bert_bfd', './ensemble_model/bert', MAX_LEN=50)
 bert_labels_score = np.array(bert_labels_score)
 bert_res = evalution_metrics(bert_valid_labels, bert_labels_score)
 
@@ -163,7 +165,7 @@ for i in range(valid_size):
 ensembleX = np.array(ensembleX_list)
 ensembleY = np.array(pc6_valid_labels)
 
-e_m = train_ensemble_model(ensembleX, ensembleY, 'ensemble', path = './ensemble_model/AI4AFP')
+e_m = train_ensemble_model(ensembleX, ensembleY, 'ensemble', path = './ensemble_model')
 
 # Get independent data size
 in_size = len(pc6_test_labels)
@@ -176,7 +178,7 @@ doc2vec_rf_test_score = doc2vec_forest.predict(doc2vec_test_features)
 doc2vec_svm_test_score = doc2vec_svc.predict(doc2vec_test_features)
 doc2vec_cnn_test_score = doc2vec_cnn_model.predict(reshape_doc2vec_test_features)
 
-bert_test_score = run_bert_prediction(pos_test_data, neg_test_data, 'Rostlab/prot_bert_bfd', './ensemble_model/AI4AFP/bert', MAX_LEN=50)
+bert_test_score, bert_test_thres = run_bert_prediction(pos_test_data, neg_test_data, 'Rostlab/prot_bert_bfd', './ensemble_model/bert', MAX_LEN=50)
 
 in_ensembleX_list = []
 in_ensembleY_list = []
@@ -200,22 +202,31 @@ for i in range(in_size):
 in_ensembleX = np.array(in_ensembleX_list)
 in_ensembleY = np.array(pc6_test_labels)
 
-ensemble_model = load_model('./ensemble_model/AI4AFP/ensemble_best_weights.h5')
+ensemble_model = load_model('./ensemble_model/ensemble_best_weights.h5')
 in_score = ensemble_model.predict(in_ensembleX)
+
+(ensemble_fpr, ensemble_tpr, ensemble_thresholds) = metrics.roc_curve(pc6_test_labels, in_score)
+ensemble_thresidx = findThresIndex(ensemble_tpr, ensemble_fpr)
+ensemble_thres = ensemble_thresholds[ensemble_thresidx]
 final_score = evalution_metrics(pc6_test_labels, in_score)
-print("Final score:")
-print(final_score)
-print("PC6 RF score:")
-print(pc6_rf_res)
-print("PC6 SVM score:")
-print(pc6_svm_res)
-print("PC6 CNN score:")
-print(pc6_cnn_res)
-print("Doc2vec RF score:")
-print(doc2vec_rf_res)
-print("Doc2vec SVM score:")
-print(doc2vec_svm_res)
-print("Doc2vec CNN score:")
-print(doc2vec_cnn_res)
-print("BERT score:")
-print(bert_res)
+#print("Final score:")
+#print(final_score)
+#print("PC6 RF score:")
+#print(pc6_rf_res)
+#print("PC6 SVM score:")
+#print(pc6_svm_res)
+#print("PC6 CNN score:")
+#print(pc6_cnn_res)
+#print("Doc2vec RF score:")
+#print(doc2vec_rf_res)
+#print("Doc2vec SVM score:")
+#print(doc2vec_svm_res)
+#print("Doc2vec CNN score:")
+#print(doc2vec_cnn_res)
+#print("BERT score:")
+#print(bert_res)
+with open('thres_res.txt', 'w') as info:
+    info.write("PC6 threshold = %s\n" % pc6_thres)
+    info.write("Doc2Vec threshold = %s\n" % doc2vec_thres)
+    info.write("Bert model threshold = %s\n" % bert_thres)
+    info.write("Ensemble model threshold = %s\n" % ensemble_thres)
